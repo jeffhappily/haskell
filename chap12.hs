@@ -161,4 +161,4 @@ unfold f a = case f a of
   Nothing                 -> Leaf
 
 treeBuild :: Integer -> BinaryTree Integer
-treeBuild n = unfold (\x -> )
+treeBuild n = unfold (\x -> if x >= n then Nothing else Just (x+1, x, x+1)) 0

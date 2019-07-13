@@ -159,3 +159,6 @@ unfold :: (a -> Maybe (a,b,a))
 unfold f a = case f a of
   Just (left, val, right) -> Node (unfold f left) val (unfold f right)
   Nothing                 -> Leaf
+
+treeBuild :: Integer -> BinaryTree Integer
+treeBuild n = unfold (\x -> )

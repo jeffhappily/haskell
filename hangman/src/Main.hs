@@ -84,9 +84,23 @@ handleGuess puzzle guess = do
       return (fillInCharacter puzzle guess)
     (False, _) -> do
       putStrLn "This character wasn't in the word, try again"
-      -- Example says `(fillInCharacter puzzle guess)`
-      return puzzle
+      -- To update guess list
+      return (fillInCharacter puzzle guess)
 
+gameOver :: Puzzle -> IO ()
+gameOver (Puzzle wordToGuess _ guessed) = if (length guessed) > 7
+  then do
+    putStrLn "You lose!"
+    putStrLn $ "The word was: " ++ wordToGuess
+    exitSuccess
+  else return ()
+
+gameWin :: Puzzle -> IO ()
+gameWin (Puzzle _ filledInSoFar _) = if all isJust filledInSoFar
+  then do
+    putStrLn "You win!"
+    exitSuccess
+  else return ()
 
 
 main :: IO ()

@@ -1,6 +1,7 @@
 module Cipher where
 
 import           Data.Char
+import           System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 
 bound = 26
 steps = 3
@@ -39,3 +40,33 @@ vDecipher xs = go xs keyword ""
     go xs "" word         = go xs keyword word
     go "" _ word          = word
     go (x:xs) (y:ys) word = go xs ys (word ++ [shiftChar x (ord y) RightShift])
+
+main :: IO ()
+main = do
+  hSetBuffering stdout NoBuffering
+
+  putStrLn "Please select cipher method: "
+  putStrLn "1. Caesar"
+  putStrLn "2. Vigenere"
+
+  method <- getLine
+
+  case method of
+    "1" -> do
+      putStr "Please enter text: "
+
+      text <- getLine
+
+      putStrLn $ "Encrypted text: " ++ cipher text
+
+    "2" -> do
+      putStr "Please enter text: "
+
+      text <- getLine
+
+      putStrLn $ "Encrypted text: " ++ vCipher text
+
+    _ -> do
+      putStrLn "Invalid input, please try again"
+
+      main

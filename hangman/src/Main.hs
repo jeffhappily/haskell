@@ -8,12 +8,13 @@ import           System.Exit   (exitSuccess)
 import           System.IO     (BufferMode (NoBuffering), hSetBuffering, stdout)
 import           System.Random (randomRIO)
 
-type WordList = [String]
+newtype WordList = WordList [String]
+  deriving (Eq, Show)
 
 allWords :: IO WordList
 allWords = do
   dict <- readFile "data/dict.txt"
-  return (lines dict)
+  return $ WordList (lines dict)
 
 minWordLength :: Int
 minWordLength = 5
@@ -23,14 +24,14 @@ maxWordLength = 9
 
 gameWords :: IO WordList
 gameWords = do
-  aw <- allWords
-  return $ filter gameLength aw
+  (WordList aw) <- allWords
+  return $ WordList (filter gameLength aw)
  where
   gameLength w =
     let l = length (w :: String) in l >= minWordLength && l <= maxWordLength
 
 randomWord :: WordList -> IO String
-randomWord wl = do
+randomWord (WordList wl) = do
   randomIndex <- randomRIO (0, length wl - 1)
   return $ wl !! randomIndex
 
@@ -88,12 +89,14 @@ handleGuess puzzle guess = do
       return (fillInCharacter puzzle guess)
 
 gameOver :: Puzzle -> IO ()
-gameOver (Puzzle wordToGuess _ guessed) = if (length guessed) > 7
+gameOver puzzle@(Puzzle wordToGuess _ guessed) = if (length wrongGuesses) > 7
   then do
     putStrLn "You lose!"
     putStrLn $ "The word was: " ++ wordToGuess
     exitSuccess
   else return ()
+  where
+    wrongGuesses = filter (not . charInWord puzzle) guessed
 
 gameWin :: Puzzle -> IO ()
 gameWin (Puzzle _ filledInSoFar _) = if all isJust filledInSoFar
@@ -102,7 +105,23 @@ gameWin (Puzzle _ filledInSoFar _) = if all isJust filledInSoFar
     exitSuccess
   else return ()
 
+runGame :: Puzzle -> IO ()
+runGame puzzle = forever $ do
+  gameOver puzzle
+  gameWin puzzle
+  putStrLn $ "Current puzzle is: " ++ show puzzle
+  putStr "Guess a letter: "
+
+  guess <- getLine
+  case guess of
+    [c] -> handleGuess puzzle c >>= runGame
+    _   -> putStrLn "Your guess must be a single character"
+
 
 main :: IO ()
 main = do
-  putStrLn "hello world"
+  hSetBuffering stdout NoBuffering
+  word <- randomWord'
+  let puzzle = freshPuzzle (fmap toLower word)
+
+  runGame puzzle

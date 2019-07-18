@@ -1,6 +1,5 @@
 module Morse
-  (
-    Morse
+  ( Morse
   , charToMorse
   , morseToChar
   , stringToMorse

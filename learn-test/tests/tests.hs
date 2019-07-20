@@ -107,6 +107,62 @@ prop_expoCommutative =
   forAll (arbitrary :: Gen (Int, Int))
   (\(x, y) -> expoCommutative x y)
 
+prop_reverseTwice :: Property
+prop_reverseTwice =
+  forAll (arbitrary :: Gen [Int])
+  (\xs -> (reverse . reverse) xs == id xs)
+
+-- To allow random function generation
+newtype FuncInt = FuncInt { getFunc :: Int -> Int }
+
+instance Show FuncInt where
+  show _ = "func"
+
+instance Arbitrary FuncInt where
+  arbitrary = do
+    a <- arbitrary
+
+    return $ FuncInt a
+
+prop_dollarSign :: Property
+prop_dollarSign =
+  forAll (arbitrary :: Gen (FuncInt, Int))
+  (\(FuncInt f, x) -> (f $ x) == f x)
+
+prop_fCompose :: Property
+prop_fCompose =
+  forAll (arbitrary :: Gen (FuncInt, FuncInt, Int))
+  (\(FuncInt f, FuncInt g, x) -> (f . g) x == f (g x))
+
+prop_foldrCons :: Property
+prop_foldrCons =
+  forAll (arbitrary :: Gen ([Int], [Int]))
+  (\(xs, ys) -> foldr (:) xs ys == xs ++ ys)
+
+prop_foldrConcat :: Property
+prop_foldrConcat =
+  forAll (arbitrary :: Gen ([[Int]]))
+  (\xs -> foldr (++) [] xs == concat xs)
+
+prop_readShow :: Property
+prop_readShow =
+  forAll (arbitrary :: Gen Int)
+  (\x -> read (show x) == x)
+
+square :: Floating a => a -> a
+square x = x * x
+
+squareIdentity :: Floating a => a -> a
+squareIdentity = square . sqrt
+
+prop_squareIdentity :: Property
+prop_squareIdentity =
+  forAll (arbitrary :: Gen Double)
+  (\x -> squareIdentity x == x)
+
+twice f = f . f
+fourTimes = twice . twice
+
 main :: IO ()
 main = do
   quickCheck prop_halfIdentity
@@ -121,3 +177,11 @@ main = do
   -- Not associative nor commutative
   -- quickCheck prop_expoAssociative
   -- quickCheck prop_expoCommutative
+
+  quickCheck prop_reverseTwice
+  quickCheck prop_dollarSign
+  quickCheck prop_fCompose
+  -- quickCheck prop_foldrCons  -- doesn't hold, `foldr (:)` shouldBe `flip (++)`
+  quickCheck prop_foldrConcat
+  quickCheck prop_readShow
+  -- quickCheck prop_squareIdentity   -- doesn't hold for negative number

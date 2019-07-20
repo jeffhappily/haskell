@@ -1,6 +1,7 @@
-module Main where
+module MainTest where
 
 import           Data.List       (sort)
+import           LearnTest
 import           Test.QuickCheck
 
 -- for a function
@@ -141,7 +142,7 @@ prop_foldrCons =
 
 prop_foldrConcat :: Property
 prop_foldrConcat =
-  forAll (arbitrary :: Gen ([[Int]]))
+  forAll (arbitrary :: Gen [[Int]])
   (\xs -> foldr (++) [] xs == concat xs)
 
 prop_readShow :: Property
@@ -160,8 +161,36 @@ prop_squareIdentity =
   forAll (arbitrary :: Gen Double)
   (\x -> squareIdentity x == x)
 
+-- Idempotence
+
 twice f = f . f
 fourTimes = twice . twice
+
+prop_capitalizeWord :: Property
+prop_capitalizeWord =
+  forAll (arbitrary :: Gen String)
+  (\x ->
+    (capitalizeWord x
+    == twice capitalizeWord x)
+    &&
+    (capitalizeWord x
+    == fourTimes capitalizeWord x))
+
+prop_sort :: Property
+prop_sort =
+  forAll (arbitrary :: Gen String)
+  (\x ->
+    (sort x
+    == twice sort x)
+    &&
+    (sort x
+    == fourTimes sort x))
+
+genFulse :: Gen Fool
+genFulse = elements [Fulse, Frue]
+
+genFulse' :: Gen Fool
+genFulse' = frequency [(2, return Fulse), (1, return Frue)]
 
 main :: IO ()
 main = do
@@ -185,3 +214,6 @@ main = do
   quickCheck prop_foldrConcat
   quickCheck prop_readShow
   -- quickCheck prop_squareIdentity   -- doesn't hold for negative number
+
+  quickCheck prop_capitalizeWord
+  quickCheck prop_sort

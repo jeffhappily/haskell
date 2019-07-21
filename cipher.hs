@@ -1,7 +1,9 @@
 module Cipher where
 
 import           Data.Char
-import           System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
+import           System.IO       (BufferMode (NoBuffering), hSetBuffering,
+                                  stdout)
+import           Test.QuickCheck
 
 bound = 26
 steps = 3
@@ -41,9 +43,15 @@ vDecipher xs = go xs keyword ""
     go "" _ word          = word
     go (x:xs) (y:ys) word = go xs ys (word ++ [shiftChar x (ord y) RightShift])
 
+prop_cipher :: Property
+prop_cipher =
+  forAll (arbitrary :: Gen String)
+  (\xs -> (vCipher . vDecipher) xs == xs)
+
 main :: IO ()
 main = do
   hSetBuffering stdout NoBuffering
+  quickCheck prop_cipher
 
   putStrLn "Please select cipher method: "
   putStrLn "1. Caesar"

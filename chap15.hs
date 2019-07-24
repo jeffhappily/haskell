@@ -1,6 +1,6 @@
 module Chap15 where
 
-import           Test.QuickCheck
+import           Test.QuickCheck hiding (Failure, Success)
 
 data Optional a
   = Nada
@@ -107,8 +107,12 @@ data Trivial = Trivial deriving (Eq, Show)
 instance Semigroup Trivial where
   _ <> _ = Trivial
 
+instance Monoid Trivial where
+  mempty = Trivial
+
 instance Arbitrary Trivial where
   arbitrary = return Trivial
+
 
 semigroupAssoc :: (Eq m, Semigroup m)
   => m -> m -> m -> Bool
@@ -124,6 +128,9 @@ newtype Identity a = Identity a deriving (Eq, Show)
 
 instance Semigroup a => Semigroup (Identity a) where
   Identity a <> Identity b = Identity $ a <> b
+
+instance Monoid a => Monoid (Identity a) where
+  mempty = Identity (mempty :: a)
 
 instance Arbitrary a => Arbitrary (Identity a) where
   arbitrary = do
@@ -288,20 +295,42 @@ prop_compAssoc =
     (\xs ->
       unComp ((f <> g) <> h) xs == unComp (f <> (g <> h)) xs))
 
+data Validation a b =
+  Failure a | Success b
+  deriving (Eq, Show)
+
+instance Semigroup a => Semigroup (Validation a b) where
+  Failure x <> Failure y = Failure $ x <> y
+  Success x <> _ = Success x
+  _ <> Success x = Success x
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Validation a b) where
+  arbitrary = do
+    a <- arbitrary
+    b <- arbitrary
+
+    oneof [return $ Failure a, return $ Success b]
+
+type ValidAssoc = Validation String [Int] -> Validation String [Int] -> Validation String [Int] -> Bool
+
 main :: IO ()
 main = do
-  let ma  = monoidAssoc
-      -- mli = monoidLeftIdentity
-      -- mri = monoidRightIdentity
+  -- let ma  = monoidAssoc
+  --     mli = monoidLeftIdentity
+  --     mri = monoidRightIdentity
 
-  quickCheck (ma :: BullMappend)
+  quickCheck (monoidAssoc :: BullMappend)
   -- Not valid identity
-  -- quickCheck (mli :: Bull -> Bool)
-  -- quickCheck (mri :: Bull -> Bool)
+  -- quickCheck (monoidLeftIdentity :: Bull -> Bool)
+  -- quickCheck (monoidRightIdentity :: Bull -> Bool)
   quickCheck (monoidAssoc :: FirstMappend)
   quickCheck (monoidLeftIdentity :: FstId)
   quickCheck (monoidRightIdentity :: FstId)
+
   quickCheck (semigroupAssoc :: TrivAssoc)
+  quickCheck (monoidLeftIdentity :: Trivial -> Bool)
+  quickCheck (monoidRightIdentity :: Trivial -> Bool)
+
   quickCheck (semigroupAssoc :: IdenAssoc)
   quickCheck (semigroupAssoc :: TwoAssoc)
   quickCheck (semigroupAssoc :: ThreeAssoc)
@@ -311,3 +340,5 @@ main = do
   quickCheck (semigroupAssoc :: OrAssoc)
   quickCheck prop_combineAssoc
   quickCheck prop_compAssoc
+  quickCheck (semigroupAssoc :: ValidAssoc)
+

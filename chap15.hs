@@ -1,5 +1,6 @@
 module Chap15 where
 
+import           Data.Monoid
 import           Test.QuickCheck hiding (Failure, Success)
 
 data Optional a
@@ -130,7 +131,7 @@ instance Semigroup a => Semigroup (Identity a) where
   Identity a <> Identity b = Identity $ a <> b
 
 instance Monoid a => Monoid (Identity a) where
-  mempty = Identity (mempty :: a)
+  mempty = Identity mempty
 
 instance Arbitrary a => Arbitrary (Identity a) where
   arbitrary = do
@@ -147,6 +148,9 @@ data Two a b = Two a b deriving (Eq, Show)
 
 instance (Semigroup a, Semigroup b) => Semigroup (Two a b) where
   Two a b <> Two a' b' = Two (a <> a') (b <> b')
+
+instance (Monoid a, Monoid b) => Monoid (Two a b) where
+  mempty = Two mempty mempty
 
 instance (Arbitrary a, Arbitrary b) => Arbitrary (Two a b) where
   arbitrary = do
@@ -201,6 +205,9 @@ newtype BoolConj =
 instance Semigroup BoolConj where
   BoolConj x <> BoolConj y = BoolConj $ x && y
 
+instance Monoid BoolConj where
+  mempty = BoolConj True
+
 instance Arbitrary BoolConj where
   arbitrary = do
     a <- arbitrary
@@ -215,6 +222,9 @@ newtype BoolDisj =
 
 instance Semigroup BoolDisj where
   BoolDisj x <> BoolDisj y = BoolDisj $ x || y
+
+instance Monoid BoolDisj where
+  mempty = BoolDisj False
 
 instance Arbitrary BoolDisj where
   arbitrary = do
@@ -258,6 +268,9 @@ instance Semigroup b => Semigroup (Combine a b) where
   -- Combine f <> Combine g = Combine $ \x ->
   --   (f x) <> (g x)
 
+instance Monoid b => Monoid (Combine a b) where
+  mempty = Combine $ const mempty
+
 instance (CoArbitrary a, Arbitrary b) => Arbitrary (Combine a b) where
   arbitrary = do
     f <- arbitrary
@@ -271,6 +284,24 @@ prop_combineAssoc =
     (\xs ->
       unCombine ((f <> g) <> h) xs == unCombine (f <> (g <> h)) xs))
 
+prop_combineLeftIdentity :: Property
+prop_combineLeftIdentity =
+  forAll (arbitrary :: Gen (Combine String String))
+  (\f ->
+    forAll (arbitrary :: Gen String)
+    (\xs ->
+      unCombine (mempty <> f) xs == unCombine f xs))
+
+prop_combineRightIdentity :: Property
+prop_combineRightIdentity =
+  forAll (arbitrary :: Gen (Combine String String))
+  (\f ->
+    forAll (arbitrary :: Gen String)
+    (\xs ->
+      unCombine (f <> mempty) xs == unCombine f xs))
+
+
+
 --------------
 
 newtype Comp a =
@@ -281,6 +312,9 @@ instance Show (Comp a) where
 
 instance Semigroup a => Semigroup (Comp a) where
   Comp f <> Comp g = Comp $ f . g
+
+instance Semigroup a => Monoid (Comp a) where
+  mempty = Comp id
 
 instance (CoArbitrary a, Arbitrary a) => Arbitrary (Comp a) where
   arbitrary = do
@@ -294,6 +328,23 @@ prop_compAssoc =
     forAll (arbitrary :: Gen String)
     (\xs ->
       unComp ((f <> g) <> h) xs == unComp (f <> (g <> h)) xs))
+
+prop_compLeftIdentity :: Property
+prop_compLeftIdentity =
+  forAll (arbitrary :: Gen (Comp String))
+  (\f ->
+    forAll (arbitrary :: Gen String)
+    (\xs ->
+      unComp (mempty <> f) xs == unComp f xs))
+
+prop_compRightIdentity :: Property
+prop_compRightIdentity =
+  forAll (arbitrary :: Gen (Comp String))
+  (\f ->
+    forAll (arbitrary :: Gen String)
+    (\xs ->
+      unComp (f <> mempty) xs == unComp f xs))
+
 
 data Validation a b =
   Failure a | Success b
@@ -312,6 +363,23 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (Validation a b) where
     oneof [return $ Failure a, return $ Success b]
 
 type ValidAssoc = Validation String [Int] -> Validation String [Int] -> Validation String [Int] -> Bool
+
+---------------
+
+newtype Mem s a =
+  Mem {
+    runMem :: s -> (a,s)
+  }
+
+instance Semigroup a => Semigroup (Mem s a) where
+  Mem f <> Mem g = Mem $ 
+    \n -> let
+      (x, y) = f n
+      (x', s) = g y in
+    (x <> x', s)
+        
+instance Monoid a => Monoid (Mem s a) where
+  mempty = Mem $ \x -> (mempty, x)
 
 main :: IO ()
 main = do
@@ -332,13 +400,42 @@ main = do
   quickCheck (monoidRightIdentity :: Trivial -> Bool)
 
   quickCheck (semigroupAssoc :: IdenAssoc)
+  quickCheck (monoidLeftIdentity :: Identity String -> Bool)
+  quickCheck (monoidRightIdentity :: Identity String -> Bool)
+
   quickCheck (semigroupAssoc :: TwoAssoc)
+  quickCheck (monoidLeftIdentity :: Two String [Int] -> Bool)
+  quickCheck (monoidRightIdentity :: Two String [Int] -> Bool)
+
   quickCheck (semigroupAssoc :: ThreeAssoc)
   quickCheck (semigroupAssoc :: FourAssoc)
+
   quickCheck (semigroupAssoc :: BoolConjAssoc)
+  quickCheck (monoidLeftIdentity :: BoolConj -> Bool)
+  quickCheck (monoidRightIdentity :: BoolConj -> Bool)
+
   quickCheck (semigroupAssoc :: BoolDisjAssoc)
+  quickCheck (monoidLeftIdentity :: BoolDisj -> Bool)
+  quickCheck (monoidRightIdentity :: BoolDisj -> Bool)
+
   quickCheck (semigroupAssoc :: OrAssoc)
+
   quickCheck prop_combineAssoc
+  quickCheck prop_combineLeftIdentity
+  quickCheck prop_combineRightIdentity
+
   quickCheck prop_compAssoc
+  quickCheck prop_compLeftIdentity
+  quickCheck prop_compRightIdentity
+
   quickCheck (semigroupAssoc :: ValidAssoc)
 
+  let f' = Mem $ \s -> ("hi", s + 1)
+      rmzero = runMem mempty 0
+      rmleft = runMem (f' <> mempty) 0
+      rmright = runMem (mempty <> f') 0
+  print $ rmleft
+  print $ rmright
+  print $ (rmzero :: (String, Int))
+  print $ rmleft == runMem f' 0
+  print $ rmright == runMem f' 0

@@ -3,6 +3,7 @@ module ReplaceExperiment where
 replaceWithP :: b -> Char
 replaceWithP = const 'p'
 
+-- lms ~ List (Maybe String)
 lms :: [Maybe [Char]]
 lms = [Just "Ave", Nothing, Just "woohoo"]
 

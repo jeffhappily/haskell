@@ -140,6 +140,103 @@ instance Functor (Sum a) where
 instance (Arbitrary a, Arbitrary b) => Arbitrary (Sum a b) where
   arbitrary = oneof [First <$> arbitrary, Second <$> arbitrary]
 
+data Quant a b
+  = Finance
+  | Desk a
+  | Bloor b
+
+instance Functor (Quant a) where
+  fmap _ Finance   = Finance
+  fmap _ (Desk  a) = Desk a
+  fmap f (Bloor b) = Bloor $ f b
+
+-- b is phantom
+data K a b =
+  K a
+
+instance Functor (K a) where
+  -- no action should be taken
+  fmap _ (K a) = K a
+
+data EvilGoateeConst a b =
+  GoatyConst b
+
+instance Functor (EvilGoateeConst a) where
+  fmap f (GoatyConst b) = GoatyConst $ f b
+
+data LiftItOut f a =
+  LiftItOut (f a)
+
+instance Functor f => Functor (LiftItOut f) where
+  fmap f (LiftItOut a) = LiftItOut $ fmap f a
+
+data Parappa f g a =
+  DaWrappa (f a) (g a)
+
+instance (Functor f, Functor g) => Functor (Parappa f g) where
+  fmap f (DaWrappa a b) = DaWrappa (fmap f a) (fmap f b)
+
+data IgnoreOne f g a b =
+  IgnoringSomething (f a) (g b)
+
+instance Functor g => Functor (IgnoreOne f g a) where
+  fmap f (IgnoringSomething a b) = IgnoringSomething a (fmap f b)
+
+data Notorious g o a t =
+  Notorious (g o) (g a) (g t)
+
+instance Functor g => Functor (Notorious g o a) where
+  fmap f (Notorious a b c) = Notorious a b (fmap f c)
+
+data List a
+  = Nil
+  | Cons a (List a)
+
+instance Functor List where
+  fmap _ Nil        = Nil
+  fmap f (Cons a l) = Cons (f a) (fmap f l)
+
+data GoatLord a
+  = NoGoat
+  | OneGoat a
+  | MoreGoats
+      (GoatLord a)
+      (GoatLord a)
+      (GoatLord a)
+
+instance Functor GoatLord where
+  fmap _ NoGoat            = NoGoat
+  fmap f (OneGoat a)       = OneGoat $ f a
+  fmap f (MoreGoats a b c) = MoreGoats (f <$> a) (f <$> b) (f <$> c)
+
+data TalkToMe a
+  = Halt
+  | Print String a
+  | Read (String -> a)
+
+instance Eq a => Eq (TalkToMe a) where
+  Halt == Halt = True
+  (Print s a) == (Print s' a') = s == s' && a == a'
+  (Read f) == (Read g) = (f "aa") == (g "aa")
+  _ == _ = False
+
+instance Show a => Show (TalkToMe a) where
+  show Halt        = "Halt"
+  show (Print s a) = "Print " ++ s ++ " " ++ show a
+  show (Read _)    = "Read"
+
+instance Functor TalkToMe where
+  fmap _ Halt        = Halt
+  fmap f (Print s a) = Print s (f a)
+  fmap f (Read g)    = Read $ f. g
+
+instance Arbitrary a => Arbitrary (TalkToMe a) where
+  arbitrary = do
+    a <- arbitrary
+    s <- arbitrary
+
+    oneof [return Halt, return $ Print s a, Read <$> arbitrary]
+
 main :: IO ()
 main = do
   quickCheck (functorIdentity :: Identity Int -> Bool)
@@ -168,3 +265,6 @@ main = do
 
   quickCheck (functorIdentity :: Sum String Int -> Bool)
   quickCheck (functorComposeInt :: Sum String Int -> Bool)
+
+  quickCheck (functorIdentity :: TalkToMe Int -> Bool)
+  quickCheck (functorComposeInt :: TalkToMe Int -> Bool)

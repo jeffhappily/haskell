@@ -114,6 +114,32 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (Four' a b) where
 
 ------------
 
+-- Identical to Maybe
+data Possibly a
+  = LolNope
+  | Yeppers a
+  deriving (Eq, Show)
+
+instance Functor Possibly where
+  fmap _ LolNope     = LolNope
+  fmap f (Yeppers a) = Yeppers $ f a
+
+instance Arbitrary a => Arbitrary (Possibly a) where
+  arbitrary = oneof [return LolNope, Yeppers <$> arbitrary]
+
+-- Identical to Either
+data Sum a b
+  = First a
+  | Second b
+  deriving (Eq, Show)
+
+instance Functor (Sum a) where
+  fmap _ (First  a) = First a
+  fmap f (Second b) = Second $ f b
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Sum a b) where
+  arbitrary = oneof [First <$> arbitrary, Second <$> arbitrary]
+
 main :: IO ()
 main = do
   quickCheck (functorIdentity :: Identity Int -> Bool)
@@ -136,3 +162,9 @@ main = do
 
   quickCheck (functorIdentity :: Four' Bool Int -> Bool)
   quickCheck (functorComposeInt :: Four' Bool Int -> Bool)
+
+  quickCheck (functorIdentity :: Possibly Int -> Bool)
+  quickCheck (functorComposeInt :: Possibly Int -> Bool)
+
+  quickCheck (functorIdentity :: Sum String Int -> Bool)
+  quickCheck (functorComposeInt :: Sum String Int -> Bool)

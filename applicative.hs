@@ -1,4 +1,4 @@
-module Monoid where
+module Applicative where
 
 import           Data.Monoid
 

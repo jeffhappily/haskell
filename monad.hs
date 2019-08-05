@@ -1,3 +1,7 @@
+module Monad where
+
+import Control.Monad (join)
+
 safeDiv :: Int -> Int -> Maybe Int
 safeDiv _ 0 = Nothing
 safeDiv x y = Just (x `div` y)
@@ -19,3 +23,21 @@ val' = do
     y <- safeDiv 4 x
     z <- safeDiv 8 y
     safeDiv 16 z
+
+twiceWhenEven :: [Integer] -> [Integer]
+twiceWhenEven xs =
+  xs >>=
+    \x ->
+      if even x
+        then [x*x, x*x]
+        else [x*x]
+
+twiceWhenEven' :: [Integer] -> [Integer]
+twiceWhenEven' xs = do
+  x <- xs
+  if even x
+    then [x*x, x*x]
+    else [x*x]
+
+twiceWhenEven'' :: [Integer] -> [Integer]
+twiceWhenEven'' = join . fmap (\x -> if even x then [x*x, x*x] else [x*x])

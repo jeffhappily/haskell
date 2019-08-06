@@ -242,6 +242,15 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (Four' a b) where
 instance (Eq a, Eq b) => EqProp (Four' a b) where
   (=-=) = eq
 
+stops :: String
+stops = "pbtdkg"
+
+vowels :: String
+vowels = "aeiou"
+
+combos :: [a] -> [b] -> [c] -> [(a, b, c)]
+combos = liftA3 (,,)
+
 
 main :: IO ()
 main = do

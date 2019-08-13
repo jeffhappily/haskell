@@ -155,7 +155,13 @@ a = flip (<*>)
 
 meh :: Monad m => [a] -> (a -> m b) -> m [b]
 meh []       _ = return []
-meh (x : xs) f = foldr Cons Nil $ fmap f xs
+meh (x:xs) f   = do
+  xs' <- meh xs f
+
+  f x >>= \x' -> return $ x' : xs'
+
+flipType :: (Monad m) => [m a] -> m [a]
+flipType = flip meh id
 
 main :: IO ()
 main = do

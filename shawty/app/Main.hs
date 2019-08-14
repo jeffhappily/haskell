@@ -27,6 +27,13 @@ randomElement xs = do
 shortyGen :: IO [Char]
 shortyGen = replicateM 7 (randomElement alphaNum)
 
+-- Takes in connection, key, value
+saveURI :: R.Connection -> BC.ByteString -> BC.ByteString -> IO (Either R.Reply R.Status)
+saveURI conn shortURI uri = R.runRedis conn $ R.set shortURI uri
+
+getURI :: R.Connection -> BC.ByteString -> IO (Either R.Reply (Maybe BC.ByteString))
+getURI conn shortURI = R.runRedis conn $ R.get shortURI
+
 main :: IO ()
 main = do
   putStrLn "hello world"

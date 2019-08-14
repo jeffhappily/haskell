@@ -12,6 +12,21 @@ import           Network.URI            (URI, parseURI)
 import qualified System.Random          as SR
 import           Web.Scotty
 
+alphaNum :: String
+alphaNum = ['A'..'Z'] ++ ['0'..'9']
+
+randomElement :: String -> IO Char
+randomElement xs = do
+  let
+    maxIndex :: Int
+    maxIndex = length xs - 1
+
+  randomDigit <- SR.randomRIO (0, maxIndex)
+  return $ xs !! randomDigit
+
+shortyGen :: IO [Char]
+shortyGen = replicateM 7 (randomElement alphaNum)
+
 main :: IO ()
 main = do
   putStrLn "hello world"

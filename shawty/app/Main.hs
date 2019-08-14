@@ -104,4 +104,5 @@ app rConn = do
 
 main :: IO ()
 main = do
-  putStrLn "hello world"
+  rConn <- R.connect R.defaultConnectInfo
+  scotty 3000 (app rConn)

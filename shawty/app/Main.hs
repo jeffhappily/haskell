@@ -78,13 +78,21 @@ app rConn = do
     case parsedUri of
       Just _ -> do
         shawty <- liftIO shortyGen
+        uri <- liftIO (getURI rConn shawty)
 
         let
           shorty = BC.pack shawty
           uri' = encodeUtf8 (TL.toStrict uri)
 
-        resp <- liftIO (saveURI rConn shorty uri')
-        html (shortyCreated resp shawty)
+        case uri of
+          Left reply ->
+            text (TL.pack (show reply))
+          Right mbBS -> case mbBS of
+            Nothing -> do
+              resp <- liftIO (saveURI rConn shorty uri')
+              html (shortyCreated resp shawty)
+            -- Random generated code exist
+            Just _ -> text "Internal server error"
 
       Nothing -> text (shortyAintUri uri)
 

@@ -73,5 +73,3 @@ instance Foldable (Four' a) where
 filterF
   :: (Applicative f, Foldable t, Monoid (f a)) => (a -> Bool) -> t a -> f a
 filterF f xs = foldMap (\x -> if f x then pure x else mempty) xs
-
-

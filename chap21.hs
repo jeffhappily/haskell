@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Chap21 where
 
 import           Test.QuickCheck
@@ -222,6 +224,63 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (Bigger a b) where
 instance (Eq a, Eq b) => EqProp (Bigger a b) where
   (=-=) = eq
 
+----------------
+
+data S n a = S (n a) a deriving (Eq, Show)
+
+instance ( Functor n , Arbitrary (n a) , Arbitrary a ) => Arbitrary (S n a) where
+  arbitrary =
+    S <$> arbitrary <*> arbitrary
+
+instance ( Applicative n , Testable (n Property) , Eq a , Eq (n a) , EqProp a) => EqProp (S n a) where
+  (=-=) = eq
+
+instance Functor n => Functor (S n) where
+  fmap f (S xs x) = S (fmap f xs) (f x)
+
+instance Foldable n => Foldable (S n) where
+  foldMap f (S xs x) = foldMap f xs <> f x
+
+instance Traversable n => Traversable (S n) where
+  traverse f (S xs x) = S <$> traverse f xs <*> f x
+
+---------------
+
+data Tree a
+  = Empty
+  | Leaf a
+  | Node (Tree a) a (Tree a)
+  deriving (Eq, Show)
+
+instance Functor Tree where
+  fmap _ Empty        = Empty
+  fmap f (Leaf a)     = Leaf $ f a
+  fmap f (Node x a y) = Node (fmap f x) (f a) (fmap f y)
+
+-- foldMap is a bit easier
+-- and looks more natural,
+-- but you can do foldr too
+-- for extra credit.
+instance Foldable Tree where
+  foldMap _ Empty        = mempty
+  foldMap f (Leaf a)     = f a
+  foldMap f (Node x a y) = foldMap f x <> f a <> foldMap f x
+
+  foldr _ z Empty        = z
+  foldr f z (Leaf a)     = f a z
+  foldr f z (Node x a y) = f a $ foldr f (foldr f z x) y
+
+instance Traversable Tree where
+  traverse _ Empty        = pure Empty
+  traverse f (Leaf a)     = Leaf <$> f a
+  traverse f (Node x a y) = Node <$> traverse f x <*> f a <*> traverse f y
+
+instance Arbitrary a => Arbitrary (Tree a) where
+  arbitrary = oneof [return Empty, Leaf <$> arbitrary, Node <$> arbitrary <*> arbitrary <*> arbitrary]
+
+instance Eq a => EqProp (Tree a) where
+  (=-=) = eq
+
 main :: IO ()
 main = do
   let
@@ -249,6 +308,12 @@ main = do
     bigger :: Bigger Int (Int, Int, [Int])
     bigger = undefined
 
+    s :: S [] (Int, Int, [Int])
+    s = undefined
+
+    tree :: Tree (Int, Int, [Int])
+    tree = undefined
+
   quickBatch (traversable iden)
   quickBatch (traversable cons)
   quickBatch (traversable opt)
@@ -257,3 +322,5 @@ main = do
   quickBatch (traversable pair)
   quickBatch (traversable big)
   quickBatch (traversable bigger)
+  quickBatch (traversable s)
+  quickBatch (traversable tree)

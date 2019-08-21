@@ -1,5 +1,9 @@
 module Chap21 where
 
+import           Test.QuickCheck
+import           Test.QuickCheck.Checkers
+import           Test.QuickCheck.Classes
+
 -- Example on when to use Traversable
 data Query = Query
 data SomeObj = SomeObj
@@ -38,3 +42,218 @@ pipelineFn' query = do
   a <- fetchFn query
 
   traverse makeIoOnlyObj (traverse decodeFn a)
+
+----------------
+
+newtype Identity a = Identity a
+  deriving (Eq, Ord, Show)
+
+instance Functor Identity where
+  fmap f (Identity a) = Identity $ f a
+
+instance Foldable Identity where
+  foldMap f (Identity a) = f a
+
+instance Traversable Identity where
+  -- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+  traverse f (Identity a) = Identity <$> f a
+
+instance Arbitrary a => Arbitrary (Identity a) where
+  arbitrary = Identity <$> arbitrary
+
+instance Eq a => EqProp (Identity a) where
+  (=-=) = eq
+
+----------------
+
+newtype Constant a b =
+  Constant { getConstant :: a }
+  deriving (Eq, Ord, Show)
+
+instance Functor (Constant a) where
+  fmap _ (Constant a) = Constant a
+
+instance Foldable (Constant a) where
+  foldMap _ _ = mempty
+
+instance Traversable (Constant a) where
+  -- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+  traverse _ (Constant a) = pure $ Constant a
+
+instance Arbitrary a => Arbitrary (Constant a b) where
+  arbitrary = Constant <$> arbitrary
+
+instance Eq a => EqProp (Constant a b) where
+  (=-=) = eq
+
+-----------------
+
+data Optional a
+  = Nada
+  | Yep a
+  deriving (Eq, Ord, Show)
+
+instance Functor Optional where
+  fmap _ Nada    = Nada
+  fmap f (Yep a) = Yep $ f a
+
+instance Foldable Optional where
+  foldMap _ Nada    = mempty
+  foldMap f (Yep a) = f a
+
+instance Traversable Optional where
+  -- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+  traverse _ Nada    = pure Nada
+  traverse f (Yep a) = Yep <$> f a
+
+instance Arbitrary a => Arbitrary (Optional a) where
+  arbitrary = oneof [return Nada, Yep <$> arbitrary]
+
+instance Eq a => EqProp (Optional a) where
+  (=-=) = eq
+
+-------------------
+
+data List a
+  = Nil
+  | Cons a (List a)
+  deriving (Eq, Ord, Show)
+
+instance Functor List where
+  fmap _ Nil         = Nil
+  fmap f (Cons x xs) = Cons (f x) (fmap f xs)
+
+instance Foldable List where
+  foldr _ z Nil         = z
+  foldr f z (Cons x xs) = f x (foldr f z xs)
+
+instance Traversable List where
+  -- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+  traverse _ Nil         = pure Nil
+  traverse f (Cons x xs) = Cons <$> f x <*> traverse f xs
+
+instance Arbitrary a => Arbitrary (List a) where
+  arbitrary = oneof [return Nil, Cons <$> arbitrary <*> arbitrary]
+
+instance Eq a => EqProp (List a) where
+  (=-=) = eq
+
+-----------------
+
+data Three a b c =
+  Three a b c
+  deriving (Eq, Ord, Show)
+
+instance Functor (Three a b) where
+  fmap f (Three a b c) = Three a b (f c)
+
+instance Foldable (Three a b) where
+  foldMap f (Three _ _ c) = f c
+
+instance Traversable (Three a b) where
+  traverse f (Three a b c) = Three a b <$> f c
+
+instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (Three a b c) where
+  arbitrary = Three <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance (Eq a, Eq b, Eq c) => EqProp (Three a b c) where
+  (=-=) = eq
+
+--------------------
+
+data Pair a b =
+  Pair a b
+  deriving (Eq, Ord, Show)
+
+instance Functor (Pair a) where
+  fmap f (Pair a b) = Pair a (f b)
+
+instance Foldable (Pair a) where
+  foldMap f (Pair _ b) = f b
+
+instance Traversable (Pair a) where
+  traverse f (Pair a b) = Pair a <$> f b
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Pair a b) where
+  arbitrary = Pair <$> arbitrary <*> arbitrary
+
+instance (Eq a, Eq b) => EqProp (Pair a b) where
+  (=-=) = eq
+
+--------------------
+
+data Big a b =
+  Big a b b
+  deriving (Eq, Ord, Show)
+
+instance Functor (Big a) where
+  fmap f (Big a b b') = Big a (f b) (f b')
+
+instance Foldable (Big a) where
+  foldMap f (Big _ b b') = f b <> f b'
+
+instance Traversable (Big a) where
+  traverse f (Big a b b') = Big a <$> f b <*> f b'
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Big a b) where
+  arbitrary = Big <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance (Eq a, Eq b) => EqProp (Big a b) where
+  (=-=) = eq
+
+------------------
+
+data Bigger a b =
+  Bigger a b b b
+  deriving (Eq, Ord, Show)
+
+instance Functor (Bigger a) where
+  fmap f (Bigger a b b' b'') = Bigger a (f b) (f b') (f b'')
+
+instance Foldable (Bigger a) where
+  foldMap f (Bigger _ b b' b'') = f b <> f b' <> f b''
+
+instance Traversable (Bigger a) where
+  traverse f (Bigger a b b' b'') = Bigger a <$> f b <*> f b' <*> f b''
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Bigger a b) where
+  arbitrary = Bigger <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+instance (Eq a, Eq b) => EqProp (Bigger a b) where
+  (=-=) = eq
+
+main :: IO ()
+main = do
+  let
+    iden :: Identity (Int, Int, [Int])
+    iden = undefined
+
+    cons :: Constant (Int, Int, [Int]) (Int, Int, [Int])
+    cons = undefined
+
+    opt :: Optional (Int, Int, [Int])
+    opt = undefined
+
+    lst :: List (Int, Int, [Int])
+    lst = undefined
+
+    three :: Three Int Int (Int, Int, [Int])
+    three = undefined
+
+    pair :: Pair Int (Int, Int, [Int])
+    pair = undefined
+
+    big :: Big Int (Int, Int, [Int])
+    big = undefined
+
+    bigger :: Bigger Int (Int, Int, [Int])
+    bigger = undefined
+
+  quickBatch (traversable iden)
+  quickBatch (traversable cons)
+  quickBatch (traversable opt)
+  quickBatch (traversable lst)
+  quickBatch (traversable three)
+  quickBatch (traversable pair)
+  quickBatch (traversable big)
+  quickBatch (traversable bigger)

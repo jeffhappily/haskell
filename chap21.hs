@@ -264,7 +264,7 @@ instance Functor Tree where
 instance Foldable Tree where
   foldMap _ Empty        = mempty
   foldMap f (Leaf a)     = f a
-  foldMap f (Node x a y) = foldMap f x <> f a <> foldMap f x
+  foldMap f (Node x a y) = foldMap f x <> f a <> foldMap f y
 
   foldr _ z Empty        = z
   foldr f z (Leaf a)     = f a z

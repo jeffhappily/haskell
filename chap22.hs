@@ -50,3 +50,13 @@ tupled' = do
   rev >>= \a ->
     cap >>= \b ->
       return (a, b)
+
+---------------------
+
+myLiftA2 :: Applicative f =>
+  (a -> b -> c)
+  -> f a -> f b -> f c
+myLiftA2 f a b = f <$> a <*> b
+
+asks :: (r -> a) -> Reader r a
+asks = Reader

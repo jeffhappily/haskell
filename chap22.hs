@@ -82,5 +82,5 @@ instance Monad (Reader r) where
 
   (>>=) :: Reader r a -> (a -> Reader r b) -> Reader r b
   (Reader ra) >>= aRb =
-    Reader $ \r -> let Reader f = aRb (ra r) in f r
+    Reader $ \r -> runReader (aRb (ra r)) r
 

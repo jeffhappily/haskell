@@ -1,15 +1,10 @@
-{-# LANGUAGE InstanceSigs #-}
-
 module RandomExample where
 
 import           Control.Applicative       (liftA2, liftA3)
 import           Control.Monad             (replicateM)
 import           Control.Monad.Trans.State
+import qualified Data.DList                as DL
 import           System.Random
--- import           Test.QuickCheck
--- import           Test.QuickCheck.Checkers
--- import           Test.QuickCheck.Classes
--- import           Test.QuickCheck.Gen
 
 -- Six-sided die
 data Die
@@ -77,56 +72,34 @@ rollsToGetN = (fst .) . rollsCountLogged
 rollsToGetTwenty :: StdGen -> Int
 rollsToGetTwenty = rollsToGetN 20
 
-----------------------
+-------------------
 
-newtype Moi s a = Moi { runMoi :: s -> (a, s) }
+fizzBuzz :: Integer -> String
+fizzBuzz n
+  | n `mod` 15 == 0 = "FizzBuzz"
+  | n `mod` 5 == 0 = "Buzz"
+  | n `mod` 3 == 0 = "Fizz"
+  | otherwise = show n
 
-instance Functor (Moi s) where
-  fmap :: (a -> b) -> Moi s a -> Moi s b
-  fmap f (Moi g) = Moi $ \s -> let (a, s') = g s in (f a, s')
+fizzbuzzList :: [Integer] -> DL.DList String
+fizzbuzzList list =
+  execState (mapM_ addResult list) DL.empty
 
-instance Monoid s => Applicative (Moi s) where
-  pure :: a -> Moi s a
-  pure a = Moi $ (,) a
+addResult :: Integer -> State (DL.DList String) ()
+addResult n = do
+  xs <- get
+  let result = fizzBuzz n
+  -- snoc appends to the end, unlike
+  -- cons which adds to the front
+  put (DL.snoc xs result)
 
-  (<*>) :: Moi s (a -> b)
-    -> Moi s a
-    -> Moi s b
-  (Moi f) <*> (Moi g) =
-    Moi $ \s ->
-      let
-        (h, s') = f s
-        (a, s'') = g s in
-      (h a, s' <> s'')
+fizzbuzzFromTo :: Integer
+  -> Integer
+  -> [String]
+fizzbuzzFromTo from to
+  | from > to = []
+  | otherwise = fizzBuzz from : fizzbuzzFromTo (from + 1) to
 
-instance Monoid s => Monad (Moi s) where
-  return = pure
-
-  (>>=) :: Moi s a
-    -> (a -> Moi s b)
-    -> Moi s b
-  (Moi f) >>= g =
-    Moi $ \s ->
-      let
-        (a, s') = f s
-        (Moi h) = g a
-        (b, s'') = h s in
-      (b, s' <> s'')
-
--- instance (CoArbitrary s, Arbitrary s, Arbitrary a) => Arbitrary (Moi s a) where
---   arbitrary = Moi <$> arbitrary
-
--- instance (Eq s, Eq a, Arbitrary s) => EqProp (Moi s a) where
---   Moi f =-= Moi g = unGen $ liftA2 eq (f <$> x) (g <$> x)
---     where x = arbitrary
-
--- instance Show (Moi s a) where
---   show _ = "moi"
-
--- main :: IO ()
--- main = do
---   let
---     moi :: Moi String (String, String, [String])
---     moi = undefined
-
-  -- quickBatch (applicative moi)
+main :: IO ()
+main =
+  mapM_ putStrLn $ fizzbuzzList [1..100]

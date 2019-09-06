@@ -1,34 +1,80 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Chap23 where
 
-import           Control.Monad.Trans.State
-import qualified Data.DList                as DL
+-- import           Control.Monad.Trans.State
+-- import           Test.QuickCheck
+-- import           Test.QuickCheck.Checkers
+-- import           Test.QuickCheck.Classes
+-- import           Test.QuickCheck.Gen
 
-fizzBuzz :: Integer -> String
-fizzBuzz n
-  | n `mod` 15 == 0 = "FizzBuzz"
-  | n `mod` 5 == 0 = "Buzz"
-  | n `mod` 3 == 0 = "Fizz"
-  | otherwise = show n
+newtype State s a = State { runState :: s -> (a, s) }
 
-fizzbuzzList :: [Integer] -> DL.DList String
-fizzbuzzList list =
-  execState (mapM_ addResult list) DL.empty
+instance Functor (State s) where
+  fmap :: (a -> b) -> State s a -> State s b
+  fmap f (State g) = State $ \s -> let (a, s') = g s in (f a, s')
 
-addResult :: Integer -> State (DL.DList String) ()
-addResult n = do
-  xs <- get
-  let result = fizzBuzz n
-  -- snoc appends to the end, unlike
-  -- cons which adds to the front
-  put (DL.snoc xs result)
+instance Monoid s => Applicative (State s) where
+  pure :: a -> State s a
+  pure a = State $ (,) a
 
-fizzbuzzFromTo :: Integer
-  -> Integer
-  -> [String]
-fizzbuzzFromTo from to
-  | from > to = []
-  | otherwise = fizzBuzz from : fizzbuzzFromTo (from + 1) to
+  (<*>) :: State s (a -> b)
+    -> State s a
+    -> State s b
+  (State f) <*> (State g) =
+    State $ \s ->
+      let
+        (h, s') = f s
+        (a, s'') = g s in
+      (h a, s' <> s'')
 
-main :: IO ()
-main =
-  mapM_ putStrLn $ fizzbuzzList [1..100]
+instance Monoid s => Monad (State s) where
+  return = pure
+
+  (>>=) :: State s a
+    -> (a -> State s b)
+    -> State s b
+  (State f) >>= g =
+    State $ \s ->
+      let
+        (a, s') = f s
+        (State h) = g a
+        (b, s'') = h s in
+      (b, s' <> s'')
+
+----------------------
+
+-- instance (CoArbitrary s, Arbitrary s, Arbitrary a) => Arbitrary (State s a) where
+--   arbitrary = State <$> arbitrary
+
+-- instance (Eq s, Eq a, Arbitrary s) => EqProp (State s a) where
+--   State f =-= State g = unGen $ liftA2 eq (f <$> x) (g <$> x)
+--     where x = arbitrary
+
+-- instance Show (State s a) where
+--   show _ = "State"
+
+-- main :: IO ()
+-- main = do
+--   let
+--     State :: State String (String, String, [String])
+--     State = undefined
+
+  -- quickBatch (applicative State)
+
+-----------------
+
+get :: State s s
+get = State $ \x -> (x, x)
+
+put :: s -> State s ()
+put s = State $ \_ -> ((), s)
+
+exec :: State s a -> s -> s
+exec (State sa) = snd . sa
+
+eval :: State s a -> s -> a
+eval (State sa) = fst . sa
+
+modify :: (s -> s) -> State s ()
+modify f = State $ \s -> ((), f s)

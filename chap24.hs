@@ -1,5 +1,7 @@
 module Chap24 where
 
+import           Control.Applicative
+import           Data.Ratio              ((%))
 import           Text.Parser.Combinators
 import           Text.Trifecta
 
@@ -28,6 +30,22 @@ p123 s = print $ parseString (string s) mempty "123"
 
 pNL :: String -> IO ()
 pNL s = putStrLn ('\n' : s)
+
+---------------
+
+-- type NumberOrFraction = Either Integer Rational
+
+parseNumberOrFraction :: Parser Rational
+parseNumberOrFraction =
+      try parseFraction
+  <|> (%1) <$> decimal
+
+parseFraction :: Parser Rational
+parseFraction = do
+  numerator <- decimal
+  char '/'
+  denominator <- decimal
+  return (numerator % denominator)
 
 main :: IO ()
 main = do

@@ -23,6 +23,8 @@ def
 
 parseNos :: Parser NumberOrString
 parseNos =
+  skipMany (oneOf "\n")
+  >>
       (Left <$> integer)
   <|> (Right <$> some letter)
 
@@ -36,4 +38,4 @@ main = do
   print $ p parseNos b
   print $ p (many parseNos) c
   print $ p (some parseNos) c
-  print $ p parseNos eitherOr
+  print $ p (some (token parseNos)) eitherOr

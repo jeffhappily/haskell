@@ -57,6 +57,12 @@ data NumberOrString
   | NOSI Integer
   deriving (Eq, Show)
 
+instance Ord NumberOrString where
+  compare (NOSS x) (NOSS y) = compare x y
+  compare (NOSI x) (NOSI y) = compare x y
+  compare (NOSS x) (NOSI y) = compare x (show y)
+  compare (NOSI x) (NOSS y) = compare (show x) y
+
 type Major = Integer
 type Minor = Integer
 type Patch = Integer
@@ -66,6 +72,15 @@ type Metadata = [NumberOrString]
 data SemVer =
   SemVer Major Minor Patch Release Metadata
   deriving (Eq, Show)
+
+instance Ord SemVer where
+  compare (SemVer ma mi p r m) (SemVer ma' mi' p' r' m')
+    | ma /= ma' = compare ma ma'
+    | mi /= mi' = compare mi mi'
+    | p /= p' = compare p p'
+    | (r == [] || r' == []) && not (r == [] && r' == []) = if r == [] then GT else LT
+    | length r /= length r' = compare (length r) (length r')
+    | otherwise = foldl (\z x -> if z /= EQ then z else uncurry compare x) EQ $ zip r r'
 
 parseRelease :: Parser Release
 parseRelease = char '-' >>

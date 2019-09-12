@@ -111,9 +111,70 @@ parseSemVer = do
   release <- try parseRelease <|> (do return [])
   metadata <- try parseMetadata <|> (do return [])
 
-  -- try (char '-') <|> skipMany (oneOf "\n")
-
   return $ SemVer major minor patch release metadata
+
+------------------
+
+parseDigit :: Parser Char
+parseDigit = oneOf "1234567890"
+
+base10Integer :: Parser Integer
+base10Integer = read <$> some parseDigit
+
+base10Integer' :: Parser Integer
+base10Integer' = try (char '-' >> negate <$> base10Integer)
+             <|> base10Integer
+
+-----------------
+
+-- aka area code
+type NumberingPlanArea = Int
+type Exchange = Int
+type LineNumber = Int
+
+data PhoneNumber =
+  PhoneNumber NumberingPlanArea
+              Exchange LineNumber
+  deriving (Eq, Show)
+
+skipCountryCode :: Parser ()
+skipCountryCode = try (skipOptional (char '1' >> char '-')) <|> (do return ())
+
+parseNumberingPlanArea :: Parser NumberingPlanArea
+parseNumberingPlanArea = do
+  skipOptional (char '(')
+  a <- digit
+  b <- digit
+  c <- digit
+  skipOptional (char ')')
+  skipOptional (char '-')
+  skipOptional (char ' ')
+
+  return $ read $ a : b : c : []
+
+parseExchange :: Parser Exchange
+parseExchange = do
+  a <- digit
+  b <- digit
+  c <- digit
+  skipOptional (char '-')
+
+  return $ read $ a : b : c : []
+
+parseLineNumber :: Parser LineNumber
+parseLineNumber = do
+  a <- digit
+  b <- digit
+  c <- digit
+  d <- digit
+
+  return $ read $ a : b : c : d : []
+
+parsePhone :: Parser PhoneNumber
+parsePhone = skipCountryCode >>
+  PhoneNumber <$> parseNumberingPlanArea <*> parseExchange <*> parseLineNumber
+
+-------------------------
 
 main :: IO ()
 main = do

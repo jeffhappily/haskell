@@ -3,6 +3,7 @@ module Chap24 where
 import           Control.Applicative
 import           Data.Ratio              ((%))
 import           Text.Parser.Combinators
+import           Text.Read               (readMaybe)
 import           Text.Trifecta
 
 stop :: Parser a
@@ -68,13 +69,21 @@ data SemVer =
 
 parseRelease :: Parser Release
 parseRelease = char '-' >>
-        (try (NOSI <$> decimal)
-    <|> (NOSS <$> (some alphaNum)) ) `sepBy` char '.'
+  (do
+    str <- some alphaNum
+    case readMaybe str :: Maybe Integer of
+      Just n  -> return $ NOSI n
+      Nothing -> return $ NOSS str
+  ) `sepBy` char '.'
 
 parseMetadata :: Parser Metadata
 parseMetadata = char '+' >>
-        (try (NOSI <$> decimal)
-    <|> (NOSS <$> (some alphaNum)) ) `sepBy` char '.'
+  (do
+    str <- some alphaNum
+    case readMaybe str :: Maybe Integer of
+      Just n  -> return $ NOSI n
+      Nothing -> return $ NOSS str
+  ) `sepBy` char '.'
 
 parseSemVer :: Parser SemVer
 parseSemVer = do

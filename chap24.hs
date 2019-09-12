@@ -54,6 +54,7 @@ parseFraction = do
 data NumberOrString
   = NOSS String
   | NOSI Integer
+  deriving (Eq, Show)
 
 type Major = Integer
 type Minor = Integer
@@ -63,9 +64,32 @@ type Metadata = [NumberOrString]
 
 data SemVer =
   SemVer Major Minor Patch Release Metadata
+  deriving (Eq, Show)
+
+parseRelease :: Parser Release
+parseRelease = char '-' >>
+        (try (NOSI <$> decimal)
+    <|> (NOSS <$> (some alphaNum)) ) `sepBy` char '.'
+
+parseMetadata :: Parser Metadata
+parseMetadata = char '+' >>
+        (try (NOSI <$> decimal)
+    <|> (NOSS <$> (some alphaNum)) ) `sepBy` char '.'
 
 parseSemVer :: Parser SemVer
-parseSemVer = undefined
+parseSemVer = do
+  major <- decimal
+  char '.'
+  minor <- decimal
+  char '.'
+  patch <- decimal
+
+  release <- try parseRelease <|> (do return [])
+  metadata <- try parseMetadata <|> (do return [])
+
+  -- try (char '-') <|> skipMany (oneOf "\n")
+
+  return $ SemVer major minor patch release metadata
 
 main :: IO ()
 main = do

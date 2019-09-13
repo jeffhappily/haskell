@@ -203,6 +203,16 @@ parseDate' = do
 
   return $ DateTime (fromIntegral year) (fromIntegral month) (fromIntegral day) 0 0 0
 
+parseActivity :: Parser Activity
+parseActivity = do
+  hour <- integer
+  char ':'
+  minute <- integer
+  description <- some (noneOf "\n")
+  skipEOL
+
+  return $ Activity (Time (fromIntegral hour) (fromIntegral minute) 0) description
+
 main :: IO ()
 main = do
   pNL "stop:"

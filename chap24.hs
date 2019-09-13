@@ -1,6 +1,7 @@
 module Chap24 where
 
 import           Control.Applicative
+import           Data.Dates
 import           Data.Ratio              ((%))
 import           Text.Parser.Combinators
 import           Text.Read               (readMaybe)
@@ -175,6 +176,32 @@ parsePhone = skipCountryCode >>
   PhoneNumber <$> parseNumberingPlanArea <*> parseExchange <*> parseLineNumber
 
 -------------------------
+
+type Description = String
+
+data Activity = Activity Time Description
+  deriving (Eq, Show)
+
+data DayLog = DayLog DateTime [Activity]
+  deriving (Eq, Show)
+
+skipEOL :: Parser ()
+skipEOL = skipMany (oneOf "\n")
+
+skipComments :: Parser ()
+skipComments = skipEOL >> string "--" >> skipMany (noneOf "\n") >> skipEOL
+
+parseDate' :: Parser DateTime
+parseDate' = do
+  string "# "
+  year <- integer
+  char '-'
+  month <- integer
+  char '-'
+  day <- integer
+  skipEOL
+
+  return $ DateTime (fromIntegral year) (fromIntegral month) (fromIntegral day) 0 0 0
 
 main :: IO ()
 main = do

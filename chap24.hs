@@ -295,6 +295,10 @@ parseIPV4 = do
 
   return $ IPAddress (three * f 3 + two * f 2 + one * f 1 + zero * f 0)
 
+data IPAddress6 =
+  IPAddress6 Word64 Word64
+  deriving (Eq, Ord, Show)
+
 main :: IO ()
 main = do
   pNL "stop:"

@@ -1,9 +1,15 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Chap24 where
 
 import           Control.Applicative
+import           Control.Monad           (void)
 import           Data.Dates
+import           Data.List
 import           Data.Ratio              ((%))
+import           Data.Time.Format
 import           Text.Parser.Combinators
+import           Text.RawString.QQ
 import           Text.Read               (readMaybe)
 import           Text.Trifecta
 
@@ -177,19 +183,53 @@ parsePhone = skipCountryCode >>
 
 -------------------------
 
+logFile = [r|
+-- wheee a comment
+# 2025-02-05
+08:00 Breakfast
+09:00 Sanitizing moisture collector
+11:00 Exercising in high-grav gym
+12:00 Lunch
+13:00 Programming
+17:00 Commuting home in rover
+17:30 R&R
+19:00 Dinner
+21:00 Shower
+21:15 Read
+22:00 Sleep
+
+# 2025-02-07 -- dates not nececessarily sequential
+08:00 Breakfast -- should I try skippin bfast?
+09:00 Bumped head, passed out
+13:36 Wake up, headache
+13:37 Go to medbay
+13:40 Patch self up
+13:45 Commute home for rest
+14:15 Read
+21:00 Dinner
+21:15 Read
+22:00 Sleep
+|]
+
 type Description = String
 
 data Activity = Activity Time Description
-  deriving (Eq, Show)
+
+instance Show Activity where
+  show (Activity time description) = show time ++ " " ++ description
 
 data DayLog = DayLog DateTime [Activity]
-  deriving (Eq, Show)
+
+instance Show DayLog where
+  show (DayLog datetime activities) =
+    "# " ++ show datetime ++ "\n" ++
+    intercalate "\n" (map show activities)
 
 skipEOL :: Parser ()
 skipEOL = skipMany (oneOf "\n")
 
-skipComments :: Parser ()
-skipComments = skipEOL >> string "--" >> skipMany (noneOf "\n") >> skipEOL
+skipComment :: Parser ()
+skipComment = many (char ' ') *> string "--" *> void (manyTill anyChar ((void newline) <|> eof))
 
 parseDate' :: Parser DateTime
 parseDate' = do
@@ -199,6 +239,7 @@ parseDate' = do
   month <- integer
   char '-'
   day <- integer
+  try skipComment <|> (do return ())
   skipEOL
 
   return $ DateTime (fromIntegral year) (fromIntegral month) (fromIntegral day) 0 0 0
@@ -208,10 +249,20 @@ parseActivity = do
   hour <- integer
   char ':'
   minute <- integer
-  description <- some (noneOf "\n")
-  skipEOL
+
+  description <- manyTill anyChar (try skipComment <|> void newline <|> eof)
 
   return $ Activity (Time (fromIntegral hour) (fromIntegral minute) 0) description
+
+parseDayLog :: Parser DayLog
+parseDayLog =
+  many (try skipComment <|> void newline) *>
+    (DayLog <$> parseDate' <*> some parseActivity)
+
+parseDayLogs :: Parser [DayLog]
+parseDayLogs = some parseDayLog
+
+-----------------
 
 main :: IO ()
 main = do

@@ -8,6 +8,7 @@ import           Data.Dates
 import           Data.List
 import           Data.Ratio              ((%))
 import           Data.Time.Format
+import           Data.Word
 import           Text.Parser.Combinators
 import           Text.RawString.QQ
 import           Text.Read               (readMaybe)
@@ -263,6 +264,36 @@ parseDayLogs :: Parser [DayLog]
 parseDayLogs = some parseDayLog
 
 -----------------
+
+data IPAddress =
+  IPAddress Word32
+  deriving (Eq, Ord, Show)
+
+ipFormatError :: Parser a
+ipFormatError = unexpected "wrong ip address format"
+
+parseOctet :: Parser Word32
+parseOctet = do
+  num <- integer
+
+  if num > 255
+    then ipFormatError
+    else do
+      return $ fromIntegral num
+
+parseIPV4 :: Parser IPAddress
+parseIPV4 = do
+  three <- parseOctet
+  char '.'
+  two <- parseOctet
+  char '.'
+  one <- parseOctet
+  char '.'
+  zero <- parseOctet
+
+  let f x = 2 ^ (x * 8)
+
+  return $ IPAddress (three * f 3 + two * f 2 + one * f 1 + zero * f 0)
 
 main :: IO ()
 main = do

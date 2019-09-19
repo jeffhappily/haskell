@@ -51,3 +51,42 @@ class Bifunctor p where
 
   second :: (b -> c) -> p a b -> p a c
   second = bimap id
+
+data Deux a b = Deux a b
+
+instance Bifunctor Deux where
+  bimap f g (Deux x y) = Deux (f x) (g y)
+
+data Const a b = Const a
+
+instance Bifunctor Const where
+  bimap f _ (Const a) = Const $ f a
+
+data Drei a b c = Drei a b c
+
+instance Bifunctor (Drei a) where
+  bimap f g (Drei x y z) = Drei x (f y) (g z)
+
+data SuperDrei a b c = SuperDrei a b
+
+instance Bifunctor (SuperDrei a) where
+  bimap f _ (SuperDrei x y) = SuperDrei x (f y)
+
+data SemiDrei a b c = SemiDrei a
+
+instance Bifunctor (SemiDrei a) where
+  bimap _ _ (SemiDrei x) = SemiDrei x
+
+data Quadriceps a b c d =
+  Quadzzz a b c d
+
+instance Bifunctor (Quadriceps a b) where
+  bimap f g (Quadzzz x y z z') = Quadzzz x y (f z) (g z')
+
+-- data Either a b
+--   = Left a
+--   | Right b
+
+instance Bifunctor Either where
+  bimap f _ (Left x)  = Left $ f x
+  bimap _ g (Right x) = Right $ g x

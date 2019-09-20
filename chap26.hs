@@ -74,3 +74,24 @@ eitherT f g (EitherT mea) = do
   case v of
     Left a  -> f a
     Right b -> g b
+
+---------------
+
+newtype ReaderT r m a =
+  ReaderT { runReaderT :: r -> m a }
+
+instance Functor m => Functor (ReaderT r m) where
+  fmap f (ReaderT rma) = ReaderT $ (fmap . fmap) f rma
+
+instance Applicative m => Applicative (ReaderT r m) where
+  pure = ReaderT . pure . pure
+
+  (ReaderT fab) <*> (ReaderT rma) = ReaderT $ (<*>) <$> fab <*> rma
+
+instance Monad m => Monad (ReaderT r m) where
+  return = pure
+
+  (ReaderT rma) >>= f = ReaderT $ \r -> do
+    a <- rma r
+
+    runReaderT (f a) r

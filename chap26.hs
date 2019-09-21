@@ -2,6 +2,8 @@
 
 module Chap26 where
 
+import           Data.Tuple
+
 newtype MaybeT m a =
   MaybeT { runMaybeT :: m (Maybe a) }
 
@@ -95,3 +97,28 @@ instance Monad m => Monad (ReaderT r m) where
     a <- rma r
 
     runReaderT (f a) r
+
+newtype StateT s m a =
+  StateT { runStateT :: s -> m (a,s) }
+
+instance (Functor m) => Functor (StateT s m) where
+  fmap f (StateT smas) = StateT $ (fmap . fmap) f' smas
+    where f' (a, s) = (f a, s)
+
+instance (Monad m) => Applicative (StateT s m) where
+  pure a = StateT $ \s -> pure (a, s)
+
+  (StateT fab) <*> (StateT smas) = StateT $ \s -> do
+    (f, s') <- fab s
+    (a, s'') <- smas s'
+
+    return (f a, s'')
+
+instance (Monad m) => Monad (StateT s m) where
+  return = pure
+
+  (StateT sma) >>= f = StateT $ \s -> do
+    (a, s') <- sma s
+    (a', s'') <- runStateT (f a) s'
+
+    return (a', s'')

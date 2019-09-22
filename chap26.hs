@@ -2,6 +2,7 @@
 
 module Chap26 where
 
+import           Control.Monad.Trans.Except
 import           Data.Tuple
 
 newtype MaybeT m a =
@@ -122,3 +123,14 @@ instance (Monad m) => Monad (StateT s m) where
     (a', s'') <- runStateT (f a) s'
 
     return (a', s'')
+
+---------------------
+
+embedded :: MaybeT
+            (ExceptT String
+                     (ReaderT () IO))
+            Int
+embedded = MaybeT $ ExceptT $ ReaderT $ return <$> (const (Right (Just 1)))
+
+
+

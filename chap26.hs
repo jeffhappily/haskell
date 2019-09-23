@@ -2,6 +2,7 @@
 
 module Chap26 where
 
+import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Data.Tuple
 
@@ -132,5 +133,37 @@ embedded :: MaybeT
             Int
 embedded = MaybeT $ ExceptT $ ReaderT $ return <$> (const (Right (Just 1)))
 
+---------------------
 
+class MonadTrans t where
+  -- | Lift a computation from
+  -- the argument monad to
+  -- the constructed monad.
+  lift :: (Monad m) => m a -> t m a
 
+instance MonadTrans (EitherT e) where
+  lift = EitherT . liftM Right
+
+instance MonadTrans (StateT s) where
+  lift m = StateT $ \s -> do
+    a <- m
+    return (a, s)
+
+-----------------
+
+class (Monad m) => MonadIO m where
+  -- | Lift a computation
+  -- from the 'IO' monad.
+  liftIO :: IO a -> m a
+
+instance (MonadIO m)
+  => MonadIO (MaybeT m) where
+  liftIO = MaybeT . (Just <$>) . liftIO
+
+instance (MonadIO m)
+  => MonadIO (ReaderT r m) where
+  liftIO = ReaderT . const . liftIO
+
+instance (MonadIO m)
+  => MonadIO (StateT s m) where
+  liftIO m = StateT $ (\s -> swap . (,) s <$> liftIO m)

@@ -4,6 +4,7 @@ module Chap26 where
 
 import           Control.Monad
 import           Control.Monad.Trans.Except
+import qualified Control.Monad.Trans.Reader as R
 import           Data.Tuple
 
 newtype MaybeT m a =
@@ -167,3 +168,8 @@ instance (MonadIO m)
 instance (MonadIO m)
   => MonadIO (StateT s m) where
   liftIO m = StateT $ (\s -> swap . (,) s <$> liftIO m)
+
+----------------
+
+rDec :: Num a => R.Reader a a
+rDec = R.ReaderT $ return . (+ (-1))

@@ -3,9 +3,18 @@
 module Chap26 where
 
 import           Control.Monad
+import           Control.Monad.Trans.Class  hiding (MonadTrans)
 import           Control.Monad.Trans.Except
 import qualified Control.Monad.Trans.Reader as R
+import           Data.Functor.Identity
+import           Data.IORef
+import qualified Data.Map                   as M
+import           Data.Maybe                 (fromMaybe)
+import           Data.Text.Lazy             (Text)
+import qualified Data.Text.Lazy             as TL
 import           Data.Tuple
+import           System.Environment         (getArgs)
+import           Web.Scotty.Trans
 
 newtype MaybeT m a =
   MaybeT { runMaybeT :: m (Maybe a) }
@@ -173,3 +182,87 @@ instance (MonadIO m)
 
 rDec :: Num a => R.Reader a a
 rDec = R.ReaderT $ return . (+ (-1))
+
+rShow :: Show a
+  => ReaderT a Identity String
+rShow = ReaderT $ return . show
+
+rPrintAndInc :: (Num a, Show a)
+  => ReaderT a IO a
+rPrintAndInc = ReaderT $ \r -> do
+  putStrLn ("Hi: " ++ show r)
+  return (r + 1)
+
+sPrintIncAccum :: (Num a, Show a)
+  => StateT a IO String
+sPrintIncAccum = StateT $ \s -> do
+  putStrLn ("Hi: " ++ show s)
+  return (show s, s + 1)
+
+-----------------
+
+isValid :: String -> Bool
+isValid v = '!' `elem` v
+
+maybeExcite :: MaybeT IO String
+maybeExcite = MaybeT $ do
+  v <- getLine
+  guard $ isValid v
+  return $ Just v
+
+doExcite :: IO ()
+doExcite = do
+  putStrLn "say something excite!"
+  excite <- runMaybeT maybeExcite
+  case excite of
+    Nothing -> putStrLn "MOAR EXCITE"
+    Just e ->
+      putStrLn
+        ("Good, was very excite: " ++ e)
+
+-------------
+
+data Config =
+  Config
+  -- that's one, one click!
+  -- two...two clicks!
+  -- Three BEAUTIFUL clicks! ah ah ahhhh
+  { counts :: IORef (M.Map Text Integer)
+  , prefix :: Text
+  }
+
+type Scotty =
+  ScottyT Text (ReaderT Config IO)
+
+type Handler =
+  ActionT Text (ReaderT Config IO)
+
+bumpBoomp :: Text
+  -> M.Map Text Integer
+  -> (M.Map Text Integer, Integer)
+bumpBoomp k m = undefined
+
+app :: Scotty ()
+app =
+  get "/:key" $ do
+    unprefixed <- param "key"
+
+    let key' = mappend undefined unprefixed
+
+    newInteger <- undefined
+
+    html $
+      mconcat [ "<h1>Success! Count was: "
+              , TL.pack $ show newInteger
+              , "</h1>"
+              ]
+
+main :: IO ()
+main = do
+  [prefixArg] <- getArgs
+  counter <- newIORef M.empty
+
+  let config = undefined
+      runR = undefined
+
+  scottyT 3000 runR app

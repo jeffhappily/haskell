@@ -36,8 +36,9 @@ app :: Scotty ()
 app =
   get "/:key" $ do
     unprefixed <- param "key"
+    config <- lift ask
 
-    let key' = mappend undefined unprefixed
+    let key' = mappend (prefix config) unprefixed
 
     newInteger <- undefined
 

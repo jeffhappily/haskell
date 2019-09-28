@@ -3,18 +3,10 @@
 module Chap26 where
 
 import           Control.Monad
-import           Control.Monad.Trans.Class  hiding (MonadTrans)
 import           Control.Monad.Trans.Except
 import qualified Control.Monad.Trans.Reader as R
 import           Data.Functor.Identity
-import           Data.IORef
-import qualified Data.Map                   as M
-import           Data.Maybe                 (fromMaybe)
-import           Data.Text.Lazy             (Text)
-import qualified Data.Text.Lazy             as TL
 import           Data.Tuple
-import           System.Environment         (getArgs)
-import           Web.Scotty.Trans
 
 newtype MaybeT m a =
   MaybeT { runMaybeT :: m (Maybe a) }
@@ -222,47 +214,4 @@ doExcite = do
 
 -------------
 
-data Config =
-  Config
-  -- that's one, one click!
-  -- two...two clicks!
-  -- Three BEAUTIFUL clicks! ah ah ahhhh
-  { counts :: IORef (M.Map Text Integer)
-  , prefix :: Text
-  }
 
-type Scotty =
-  ScottyT Text (ReaderT Config IO)
-
-type Handler =
-  ActionT Text (ReaderT Config IO)
-
-bumpBoomp :: Text
-  -> M.Map Text Integer
-  -> (M.Map Text Integer, Integer)
-bumpBoomp k m = undefined
-
-app :: Scotty ()
-app =
-  get "/:key" $ do
-    unprefixed <- param "key"
-
-    let key' = mappend undefined unprefixed
-
-    newInteger <- undefined
-
-    html $
-      mconcat [ "<h1>Success! Count was: "
-              , TL.pack $ show newInteger
-              , "</h1>"
-              ]
-
-main :: IO ()
-main = do
-  [prefixArg] <- getArgs
-  counter <- newIORef M.empty
-
-  let config = undefined
-      runR = undefined
-
-  scottyT 3000 runR app

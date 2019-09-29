@@ -2,6 +2,7 @@
 
 module Main where
 
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Reader
 import           Data.IORef
@@ -30,7 +31,9 @@ type Handler =
 bumpBoomp :: Text
   -> M.Map Text Integer
   -> (M.Map Text Integer, Integer)
-bumpBoomp k m = undefined
+bumpBoomp k m = case M.lookup k m of
+  Just a  -> (M.update (Just . (+1)) k m, a + 1)
+  Nothing -> (M.fromList [(k, 1)], 1)
 
 app :: Scotty ()
 app =
@@ -40,7 +43,14 @@ app =
 
     let key' = mappend (prefix config) unprefixed
 
-    newInteger <- undefined
+    map <- liftIO $ readIORef (counts config)
+
+    let (newMap, newInteger) = bumpBoomp key' map
+
+    newCounter <- newIORef newMap
+
+    -- Write back to environment, but dunno how :'(
+    -- local (const (Config newCounter (prefix config))) ask
 
     html $
       mconcat [ "<h1>Success! Count was: "

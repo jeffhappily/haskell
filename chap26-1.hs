@@ -33,7 +33,7 @@ bumpBoomp :: Text
   -> (M.Map Text Integer, Integer)
 bumpBoomp k m = case M.lookup k m of
   Just a  -> (M.update (Just . (+1)) k m, a + 1)
-  Nothing -> (M.fromList [(k, 1)], 1)
+  Nothing -> (M.insert k 1 m, 1)
 
 app :: Scotty ()
 app =
@@ -47,10 +47,7 @@ app =
 
     let (newMap, newInteger) = bumpBoomp key' map
 
-    newCounter <- newIORef newMap
-
-    -- Write back to environment, but dunno how :'(
-    -- local (const (Config newCounter (prefix config))) ask
+    liftIO $ writeIORef (counts config) newMap
 
     html $
       mconcat [ "<h1>Success! Count was: "

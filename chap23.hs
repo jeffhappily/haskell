@@ -28,6 +28,21 @@ instance Monoid s => Applicative (State s) where
         (a, s'') = g s in
       (h a, s' <> s'')
 
+-- instance Monoid s => Monad (State s) where
+--   return = pure
+
+--   (>>=) :: State s a
+--     -> (a -> State s b)
+--     -> State s b
+--   (State f) >>= g =
+--     State $ \s ->
+--       let
+--         (a, s') = f s
+--         (State h) = g a
+--         (b, s'') = h s in
+--       (b, s' <> s'')
+
+-- Saw this new implementation, not sure which one is correct
 instance Monoid s => Monad (State s) where
   return = pure
 
@@ -38,10 +53,8 @@ instance Monoid s => Monad (State s) where
     State $ \s ->
       let
         (a, s') = f s
-        (State h) = g a
-        (b, s'') = h s in
-      (b, s' <> s'')
-
+        (State h) = g a in
+      h s'
 ----------------------
 
 -- instance (CoArbitrary s, Arbitrary s, Arbitrary a) => Arbitrary (State s a) where

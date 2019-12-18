@@ -26,7 +26,7 @@ cons x (DL a) = DL ((x:) . a)
 -- Append a single element to a dlist.
 infixl `snoc`
 snoc :: DList a -> a -> DList a
-snoc (DL a) x = DL ((++ [x]) . a)
+snoc (DL a) x = DL (a . (x:))
 {-# INLINE snoc #-}
 
 -- Append dlists.

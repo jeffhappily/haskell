@@ -10,7 +10,7 @@ empty = DL id
 {-# INLINE empty #-}
 
 singleton :: a -> DList a
-singleton a = DL $ \x -> x ++ [a]
+singleton a = DL ([a] ++)
 {-# INLINE singleton #-}
 
 toList :: DList a -> [a]
@@ -20,18 +20,18 @@ toList (DL a) = a []
 -- Prepend a single element to a dlist.
 infixr `cons`
 cons :: a -> DList a -> DList a
-cons x xs = DL ((x:) . unDL xs)
+cons x (DL a) = DL ((x:) . a)
 {-# INLINE cons #-}
 
 -- Append a single element to a dlist.
 infixl `snoc`
 snoc :: DList a -> a -> DList a
-snoc (DL a) x = a [x]
+snoc (DL a) x = DL ((++ [x]) . a)
 {-# INLINE snoc #-}
 
 -- Append dlists.
 append :: DList a -> DList a -> DList a
-append = undefined
+append (DL a) (DL b) = DL $ a . b
 {-# INLINE append #-}
 
 schlemiel :: Int -> [Int]

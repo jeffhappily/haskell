@@ -10,7 +10,7 @@ empty = DL id
 {-# INLINE empty #-}
 
 singleton :: a -> DList a
-singleton a = DL ([a] ++)
+singleton a = DL (a:)
 {-# INLINE singleton #-}
 
 toList :: DList a -> [a]

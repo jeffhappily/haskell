@@ -46,6 +46,25 @@ constructDlist i = toList $ go i empty
           go (n-1)
           (singleton n `append` xs)
 
+-- From Okasaki's Purely
+-- Functional Data Structures
+data Queue a =
+  Queue 
+    { enqueue :: [a]
+    , dequeue :: [a]
+    } deriving (Eq, Show)
+
+-- adds an item
+push :: a -> Queue a -> Queue a
+push x (Queue e d) = Queue (x:e) (d)
+
+pop :: Queue a -> Maybe (a, Queue a)
+pop (Queue [] [])    = Nothing
+pop (Queue e (x:xs)) = Just (x, Queue e xs)
+pop (Queue e [])     = Just (x, Queue e xs)
+  where
+    (x:xs) = reverse e
+
 main :: IO ()
 main = defaultMain
   [ bench "concat list" $

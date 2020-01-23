@@ -4,6 +4,7 @@ module Main where
 
 import           Control.Monad          (replicateM)
 import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Reader
 import qualified Data.ByteString.Char8  as BC
 import           Data.Text.Encoding     (decodeUtf8, encodeUtf8)
 import qualified Data.Text.Lazy         as TL
@@ -28,11 +29,15 @@ shortyGen :: IO [Char]
 shortyGen = replicateM 7 (randomElement alphaNum)
 
 -- Takes in connection, key, value
-saveURI :: R.Connection -> BC.ByteString -> BC.ByteString -> IO (Either R.Reply R.Status)
-saveURI conn shortURI uri = R.runRedis conn $ R.set shortURI uri
+saveURI :: BC.ByteString -> BC.ByteString -> ReaderT R.Connection IO (Either R.Reply R.Status)
+saveURI shortURI uri = do
+  conn <- ask
+  lift $ R.runRedis conn $ R.set shortURI uri
 
-getURI :: R.Connection -> BC.ByteString -> IO (Either R.Reply (Maybe BC.ByteString))
-getURI conn shortURI = R.runRedis conn $ R.get shortURI
+getURI :: BC.ByteString -> ReaderT R.Connection IO (Either R.Reply (Maybe BC.ByteString))
+getURI shortURI = do
+  conn <- ask
+  lift $ R.runRedis conn $ R.get shortURI
 
 linkShorty :: String -> String
 linkShorty shorty =
@@ -66,51 +71,55 @@ shortyFound tbs =
   , tbs, "</a>"
   ]
 
-app :: R.Connection -> ScottyM ()
-app rConn = do
-  get "/" $ do
-    uri <- param "uri"
+app :: ReaderT R.Connection ScottyM ()
+app = do
+  rConn <- ask
+  lift $ do
+    -- Create new short uri
+    get "/" $ do
+      uri <- param "uri"
 
-    let
-      parsedUri :: Maybe URI
-      parsedUri = parseURI (TL.unpack uri)
+      let
+        parsedUri :: Maybe URI
+        parsedUri = parseURI (TL.unpack uri)
 
-    case parsedUri of
-      Just _ -> do
-        shawty <- liftIO shortyGen
-        uri <- liftIO (getURI rConn shawty)
+      case parsedUri of
+        Just _ -> do
+          shawty <- liftIO shortyGen
+          uriFromRedis <- liftIO $ runReaderT (getURI (BC.pack shawty)) rConn
 
-        let
-          shorty = BC.pack shawty
-          uri' = encodeUtf8 (TL.toStrict uri)
+          let
+            shorty = BC.pack shawty
+            uri' = encodeUtf8 (TL.toStrict uri)
 
-        case uri of
-          Left reply ->
-            text (TL.pack (show reply))
-          Right mbBS -> case mbBS of
-            Nothing -> do
-              resp <- liftIO (saveURI rConn shorty uri')
-              html (shortyCreated resp shawty)
-            -- Random generated code exist
-            Just _ -> text "Internal server error"
+          case uriFromRedis of
+            -- Error from redis
+            Left reply ->
+              text (TL.pack (show reply))
+            Right mbBS -> case mbBS of
+              Nothing -> do
+                resp <- liftIO $ runReaderT (saveURI shorty uri') rConn
+                html (shortyCreated resp shawty)
+              -- Random generated code exist
+              Just _ -> text "Internal server error"
 
-      Nothing -> text (shortyAintUri uri)
+        Nothing -> text (shortyAintUri uri)
 
-  get "/:short" $ do
-    short <- param "short"
-    uri <- liftIO (getURI rConn short)
+    get "/:short" $ do
+      short <- param "short"
+      uri <- liftIO $ runReaderT (getURI short) rConn
 
-    case uri of
-      Left reply ->
-        text (TL.pack (show reply))
-      Right mbBS -> case mbBS of
-        Nothing -> text "uri not found"
-        Just bs -> html (shortyFound tbs)
-          where
-            tbs :: TL.Text
-            tbs = TL.fromStrict (decodeUtf8 bs)
+      case uri of
+        Left reply ->
+          text (TL.pack (show reply))
+        Right mbBS -> case mbBS of
+          Nothing -> text "uri not found"
+          Just bs -> html (shortyFound tbs)
+            where
+              tbs :: TL.Text
+              tbs = TL.fromStrict (decodeUtf8 bs)
 
 main :: IO ()
 main = do
   rConn <- R.connect R.defaultConnectInfo
-  scotty 3000 (app rConn)
+  scotty 3000 (runReaderT app rConn)

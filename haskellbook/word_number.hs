@@ -2,6 +2,7 @@ module WordNumber where
 
 import Data.List (intersperse)
 
+digitWords :: [String]
 digitWords = 
   [ "zero"
   , "one"

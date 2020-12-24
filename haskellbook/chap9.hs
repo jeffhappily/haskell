@@ -1,4 +1,4 @@
-module Cipher where
+module Chap9 where
 
 import           Data.Char
 import           System.IO       (BufferMode (NoBuffering), hSetBuffering,

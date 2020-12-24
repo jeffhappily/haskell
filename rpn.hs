@@ -12,5 +12,5 @@ rpn str = sec [] $ words str
 
 main :: IO ()    -- This says that main is an IO action.
 main = do
-    putStrLn $ show $ rpn "2 2 5 2 8 5 + * * * *"
+    print $ rpn "2 2 5 2 8 5 + * * * *"
     return ()
